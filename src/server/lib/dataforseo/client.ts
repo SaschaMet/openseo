@@ -48,6 +48,7 @@ import {
   postRankCheckTasks,
 } from "@/server/lib/dataforseo/serp";
 import { fetchLighthouseResult } from "@/server/lib/dataforseo/lighthouse";
+import { fetchContentParsing } from "@/server/lib/dataforseo/onpage";
 import {
   fetchLlmAggregatedMetrics,
   fetchLlmCrossAggregatedMetrics,
@@ -136,6 +137,9 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
     },
     lighthouse: {
       live: meter(customer, fetchLighthouseResult),
+    },
+    onPage: {
+      contentParsing: meter(customer, fetchContentParsing),
     },
     aiSearch: {
       mentionsSearch: meter(customer, fetchLlmMentionsSearch),

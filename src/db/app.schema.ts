@@ -1,3 +1,4 @@
+/* oxlint-disable max-lines -- declarative Drizzle table definitions; the file grows one block per table and splitting it would scatter a single logical schema. */
 import {
   sqliteTable,
   text,
@@ -29,12 +30,8 @@ export const userOnboardingAnswers = sqliteTable(
     // onboarding or via the one-time re-engagement nudge for legacy users.
     // Null = not yet shown/resolved.
     gscNudgeDismissedAt: text("gsc_nudge_dismissed_at"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     index("user_onboarding_answers_organization_idx").on(table.organizationId),
@@ -55,9 +52,7 @@ export const projects = sqliteTable(
     // onboarding and reused by every project-scoped data call.
     locationCode: integer("location_code").notNull().default(2840),
     languageCode: text("language_code").notNull().default("en"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     // Soft delete: archived projects are hidden everywhere but their data
     // (keywords, rank tracking, audits) is preserved.
     archivedAt: text("archived_at"),
@@ -91,9 +86,7 @@ export const savedKeywords = sqliteTable(
     keyword: text("keyword").notNull(),
     locationCode: integer("location_code").notNull().default(2840),
     languageCode: text("language_code").notNull().default("en"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     uniqueIndex("saved_keywords_unique_project_keyword_location_language").on(
@@ -121,9 +114,7 @@ export const savedKeywordTags = sqliteTable(
     // Palette key (e.g. "blue", "rose"). Null = derive a stable color from the
     // tag id at render time. See src/shared/tag-colors.ts.
     color: text("color"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     uniqueIndex("saved_keyword_tags_project_normalized_name_idx").on(
@@ -146,9 +137,7 @@ export const savedKeywordTagAssignments = sqliteTable(
     tagId: text("tag_id")
       .notNull()
       .references(() => savedKeywordTags.id, { onDelete: "cascade" }),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     uniqueIndex("saved_keyword_tag_assignments_unique_idx").on(
@@ -179,9 +168,7 @@ export const keywordMetrics = sqliteTable(
     keywordDifficulty: integer("keyword_difficulty"),
     intent: text("intent"),
     monthlySearches: text("monthly_searches"),
-    fetchedAt: text("fetched_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    fetchedAt: text("fetched_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     uniqueIndex("keyword_metrics_unique_project_keyword_location_language").on(
@@ -231,9 +218,7 @@ export const rankTrackingConfigs = sqliteTable(
     lastCheckedAt: text("last_checked_at"),
     nextCheckAt: text("next_check_at"),
     lastSkipReason: text("last_skip_reason"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     index("rank_tracking_configs_project_active_created_idx").on(
@@ -269,9 +254,7 @@ export const rankTrackingKeywords = sqliteTable(
     keywordDifficulty: integer("keyword_difficulty"),
     cpc: real("cpc"),
     metricsFetchedAt: text("metrics_fetched_at"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     uniqueIndex("rank_tracking_keywords_config_keyword_idx").on(
@@ -307,9 +290,7 @@ export const rankCheckRuns = sqliteTable(
       .notNull()
       .default(false),
     errorMessage: text("error_message"),
-    startedAt: text("started_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    startedAt: text("started_at").notNull().default(sql`(current_timestamp)`),
     completedAt: text("completed_at"),
   },
   (table) => [
@@ -338,9 +319,7 @@ export const rankSnapshots = sqliteTable(
     position: integer("position"), // null = not found in top 20
     url: text("url"),
     serpFeatures: text("serp_features"), // JSON array of feature type strings
-    checkedAt: text("checked_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    checkedAt: text("checked_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     // No standalone index on runId — the unique index below has it as its
@@ -370,9 +349,7 @@ export const organizationActivationState = sqliteTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     firstMcpAuthorizedAt: text("first_mcp_authorized_at"),
     firstMcpToolCallAt: text("first_mcp_tool_call_at"),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
   },
 );
 
@@ -391,9 +368,7 @@ export const projectActivationState = sqliteTable("project_activation_state", {
   // Optional integration pitch: hiding it from the dashboard does not remove
   // the GA4 connection controls from Project Settings.
   ga4CardDismissedAt: text("ga4_card_dismissed_at"),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
 
 // Point-in-time backlink profile summaries for the project's own domain,
@@ -417,9 +392,7 @@ export const backlinkSnapshots = sqliteTable(
     lostBacklinks: integer("lost_backlinks"),
     newReferringDomains: integer("new_referring_domains"),
     lostReferringDomains: integer("lost_referring_domains"),
-    capturedAt: text("captured_at")
-      .notNull()
-      .default(sql`(current_timestamp)`),
+    capturedAt: text("captured_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
     index("backlink_snapshots_project_captured_idx").on(
@@ -445,4 +418,49 @@ export const dashboardStepDismissals = sqliteTable(
     primaryKey({ columns: [table.userId, table.projectId, table.step] }),
     index("dashboard_step_dismissals_project_idx").on(table.projectId),
   ],
+);
+
+// Content optimization scans. A scan is an in-process background job (DataForSEO
+// data collection + an LLM pass) that scores one page against the live SERP for a
+// keyword. `status` drives the poll view; `report` holds the full assembled report
+// (JSON) once completed so reopening costs nothing.
+export const contentScans = sqliteTable(
+  "content_scans",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // Our internal scan id (a UUID); the UI polls on this.
+    jobId: text("job_id").notNull(),
+    url: text("url").notNull(),
+    keyword: text("keyword").notNull(),
+    region: text("region").notNull().default("US"),
+    // running | completed | failed
+    status: text("status").notNull().default("running"),
+    progress: integer("progress"),
+    error: text("error"),
+    score: integer("score"),
+    grade: text("grade"),
+    pageCategory: text("page_category"),
+    report: text("report"),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("content_scans_job_unique").on(table.jobId),
+    index("content_scans_project_created_idx").on(
+      table.projectId,
+      table.createdAt,
+    ),
+  ],
+);
+
+// Deployment-wide switch for the Content Optimization module. A single row
+// (id = "default"); the operator toggles it under Settings > Features.
+export const contentOptimizationSettings = sqliteTable(
+  "content_optimization_settings",
+  {
+    id: text("id").primaryKey(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  },
 );

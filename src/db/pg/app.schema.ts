@@ -432,3 +432,48 @@ export const dashboardStepDismissals = pgTable(
     index("dashboard_step_dismissals_project_idx").on(table.projectId),
   ],
 );
+
+// Content optimization scans. A scan is an in-process background job (DataForSEO
+// data collection + an LLM pass) that scores one page against the live SERP for a
+// keyword. `status` drives the poll view; `report` holds the full assembled report
+// (JSON) once completed so reopening costs nothing.
+export const contentScans = pgTable(
+  "content_scans",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // Our internal scan id (a UUID); the UI polls on this.
+    jobId: text("job_id").notNull(),
+    url: text("url").notNull(),
+    keyword: text("keyword").notNull(),
+    region: text("region").notNull().default("US"),
+    // running | completed | failed
+    status: text("status").notNull().default("running"),
+    progress: integer("progress"),
+    error: text("error"),
+    score: integer("score"),
+    grade: text("grade"),
+    pageCategory: text("page_category"),
+    report: text("report"),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("content_scans_job_unique").on(table.jobId),
+    index("content_scans_project_created_idx").on(
+      table.projectId,
+      table.createdAt,
+    ),
+  ],
+);
+
+// Deployment-wide switch for the Content Optimization module. A single row
+// (id = "default"); the operator toggles it under Settings > Features.
+export const contentOptimizationSettings = pgTable(
+  "content_optimization_settings",
+  {
+    id: text("id").primaryKey(),
+    enabled: boolean("enabled").notNull().default(true),
+  },
+);
