@@ -168,3 +168,13 @@ export async function fetchContentParsing(
     },
   };
 }
+
+/**
+ * Return `urls` minus any that match `target` (case-insensitive). Used to keep
+ * the scanned page out of the competitor batch so it is parsed (and billed) only
+ * once and never benchmarked against itself.
+ */
+export function withoutTarget(urls: string[], target: string): string[] {
+  const key = target.toLowerCase();
+  return urls.filter((url) => url.toLowerCase() !== key);
+}

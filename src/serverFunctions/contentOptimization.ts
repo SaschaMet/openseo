@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { AppError } from "@/server/lib/errors";
 import { ContentOptimizationService } from "@/server/features/content-optimization/services/ContentOptimizationService";
 import { CONTENT_SCAN_REGIONS } from "@/shared/content-optimization";
 import {
@@ -22,17 +23,32 @@ const jobInputSchema = z.object({
 });
 
 // Module state is deployment-wide (one BYO DataForSEO key per install), so the
-// status and the enable/disable switch are app-scoped rather than project-scoped.
+// status is app-scoped rather than project-scoped. Toggling it is an operator
+// action, so only owners/admins may change it (canManage is exposed so the UI
+// can disable the control for other members).
+function canManageModule(role: string): boolean {
+  return role === "owner" || role === "admin";
+}
+
 export const getContentOptimizationStatus = createServerFn({ method: "GET" })
   .middleware(requireAuthenticatedContext)
-  .handler(async () => ContentOptimizationService.connectionStatus());
+  .handler(async ({ context }) => ({
+    ...(await ContentOptimizationService.connectionStatus()),
+    canManage: canManageModule(context.role),
+  }));
 
 export const setContentOptimizationEnabled = createServerFn({ method: "POST" })
   .middleware(requireAuthenticatedContext)
   .validator(z.object({ enabled: z.boolean() }))
-  .handler(async ({ data }) =>
-    ContentOptimizationService.setModuleEnabled(data.enabled),
-  );
+  .handler(async ({ data, context }) => {
+    if (!canManageModule(context.role)) {
+      throw new AppError(
+        "FORBIDDEN",
+        "Only owners and admins can change this setting.",
+      );
+    }
+    return ContentOptimizationService.setModuleEnabled(data.enabled);
+  });
 
 export const startContentScan = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)

@@ -40,7 +40,12 @@ async function unavailableText(): Promise<string | null> {
 
 const runInputSchema = {
   projectId: projectIdSchema,
-  url: z.string().min(1).max(2048).describe("Page URL to analyze."),
+  url: z
+    .string()
+    .trim()
+    .url()
+    .max(2048)
+    .describe("Page URL to analyze (http or https)."),
   keyword: z
     .string()
     .min(1)

@@ -50,7 +50,10 @@ export function buildWorklistEntities(
       })),
     ...coverage.natural_language_entities.map((e) => ({
       name: e.entity,
-      importance: Math.round(e.importance ?? 0),
+      // importance is optional in the schema; clamp into the 1-10 tier range so
+      // an omitted (or out-of-range) value still renders in a tier instead of
+      // silently vanishing.
+      importance: Math.min(10, Math.max(1, Math.round(e.importance ?? 1))),
       status: e.coverage_status,
     })),
   ];

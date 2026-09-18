@@ -5,10 +5,36 @@ vi.mock("@/server/lib/runtime-env", () => ({
 }));
 
 import { AppError } from "@/server/lib/errors";
-import { fetchContentParsing } from "@/server/lib/dataforseo/onpage";
+import {
+  fetchContentParsing,
+  withoutTarget,
+} from "@/server/lib/dataforseo/onpage";
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("withoutTarget", () => {
+  it("removes the target URL (case-insensitive) from the list", () => {
+    expect(
+      withoutTarget(
+        ["https://example.com/", "https://a.com", "https://example.com/"],
+        "https://example.com/",
+      ),
+    ).toEqual(["https://a.com"]);
+  });
+
+  it("keeps the list unchanged when the target is not present", () => {
+    expect(
+      withoutTarget(["https://a.com", "https://b.com"], "https://example.com/"),
+    ).toEqual(["https://a.com", "https://b.com"]);
+  });
+
+  it("returns an empty list when only the target is present", () => {
+    expect(
+      withoutTarget(["https://example.com/"], "https://example.com/"),
+    ).toEqual([]);
+  });
 });
 
 function stubFetch(body: unknown) {

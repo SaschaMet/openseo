@@ -81,11 +81,14 @@ export function ContentOptimizationPage({
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const { data: view } = useQuery({
+  const { data: view, isError: viewIsError } = useQuery({
     queryKey: ["contentScanView", projectId, jobId],
     queryFn: () => getContentScanView({ data: { projectId, jobId: jobId! } }),
     enabled: jobId !== null,
     refetchInterval: (query) => {
+      // A failed fetch (e.g. a deleted job) is definitive; stop polling so we
+      // surface the error instead of refetching a job that will never resolve.
+      if (query.state.error) return false;
       const s = query.state.data?.status;
       return s === undefined || RUNNING_STATUSES.has(s)
         ? POLL_INTERVAL_MS
@@ -128,7 +131,8 @@ export function ContentOptimizationPage({
       (startedJobIds.has(jobId)
         ? view === undefined || RUNNING_STATUSES.has(view.status)
         : view !== undefined && RUNNING_STATUSES.has(view.status)));
-  const isLoadingStored = jobId !== null && view === undefined && !isRunning;
+  const isLoadingStored =
+    jobId !== null && view === undefined && !isRunning && !viewIsError;
 
   const onRegionChange = (value: string) => {
     const next = CONTENT_SCAN_REGIONS.find((code) => code === value);
@@ -248,6 +252,21 @@ export function ContentOptimizationPage({
             {isLoadingStored && (
               <div className="flex justify-center py-10">
                 <span className="loading loading-spinner loading-md" />
+              </div>
+            )}
+
+            {jobId !== null && viewIsError && !isRunning && (
+              <div className="alert alert-error text-sm">
+                <span>
+                  We couldn't load this scan. It may have been deleted.
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost"
+                  onClick={() => onOpenScan(null)}
+                >
+                  Close
+                </button>
               </div>
             )}
 

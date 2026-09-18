@@ -87,10 +87,10 @@ const STOPWORDS = new Set([
   "or",
 ]);
 
-function tokenize(text: string): string[] {
+export function tokenize(text: string): string[] {
   return text
     .toLowerCase()
-    .split(/[^a-z0-9']+/)
+    .split(/[^\p{L}\p{N}']+/u)
     .filter((token) => token.length > 0);
 }
 
@@ -206,7 +206,7 @@ function gradeForScore(score: number): string {
  * Lighthouse still produces a fair 0–100.
  */
 export function computeScore(components: ScoreComponents): {
-  score: number;
+  score: number | null;
   grade: string;
   focusAreas: string[];
 } {
@@ -221,7 +221,13 @@ export function computeScore(components: ScoreComponents): {
     totalWeight += weight;
     if (value < FOCUS_THRESHOLD) focusAreas.push(FOCUS_LABELS[key]);
   }
-  const score = totalWeight === 0 ? 0 : Math.round(weighted / totalWeight);
+  if (totalWeight === 0) {
+    // No component was measurable (e.g. the target and every competitor failed
+    // to parse). Grading missing data as 0/F would be misleading, so report a
+    // null score with a neutral grade.
+    return { score: null, grade: "—", focusAreas };
+  }
+  const score = Math.round(weighted / totalWeight);
   return { score, grade: gradeForScore(score), focusAreas };
 }
 
@@ -230,6 +236,7 @@ export function scoreComponents(
   target: ParsedPage,
   page1Average: BenchmarkMetrics,
   lighthouseSeoScore: number | null,
+  languageCode: string,
 ): ScoreComponents {
   // Word count: matching or exceeding the page-1 average earns full marks.
   const wordCount =
@@ -245,7 +252,10 @@ export function scoreComponents(
   let heading = h2Ratio === null ? null : clampPct(h2Ratio);
   if (heading !== null && target.h1Count === 0) heading = Math.min(heading, 50);
 
-  const readability = fleschReadingEase(target.text ?? "");
+  // Flesch Reading Ease is an English-language formula; for other locales it
+  // would be meaningless, so readability is only measured for English.
+  const readability =
+    languageCode === "en" ? fleschReadingEase(target.text ?? "") : null;
 
   const consistency = consistencyScore(
     target.title,
@@ -363,14 +373,18 @@ export interface ReportInput {
   relatedKeywords: string[];
   lighthouseSeoScore: number | null;
   reportDate: string;
+  languageCode?: string;
 }
 
 function deterministicSummary(
   keyword: string,
-  score: number,
+  score: number | null,
   grade: string,
   focusAreas: string[],
 ): string {
+  if (score === null) {
+    return `Not enough data was available to score "${keyword}" for this page.`;
+  }
   const focus =
     focusAreas.length > 0
       ? ` Priority areas: ${focusAreas.join(", ")}.`
@@ -389,6 +403,7 @@ export function buildReport(input: ReportInput): OnPageReport {
     input.target,
     benchmarks.page1_average,
     input.lighthouseSeoScore,
+    input.languageCode ?? "en",
   );
   const { score, grade, focusAreas } = computeScore(components);
 

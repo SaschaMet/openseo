@@ -53,6 +53,39 @@ function bandForScore(score: number): number {
   return 0;
 }
 
+/**
+ * Badge colors track the grade so a D/F scan is not shown with the same green
+ * "good" styling as an A/B. A null score (no measurable data) is neutral.
+ */
+function gradeBadgeStyle(grade: string, score: number | null) {
+  if (score === null) {
+    return {
+      color: "#8b949e",
+      backgroundColor: "rgba(139,148,158,0.12)",
+      borderColor: "rgba(139,148,158,0.28)",
+    };
+  }
+  if (grade === "A" || grade === "B") {
+    return {
+      color: STATUS_COLORS.good,
+      backgroundColor: "rgba(63,185,80,0.12)",
+      borderColor: "rgba(63,185,80,0.28)",
+    };
+  }
+  if (grade === "C") {
+    return {
+      color: STATUS_COLORS.present_not_entity,
+      backgroundColor: "rgba(217,169,74,0.12)",
+      borderColor: "rgba(217,169,74,0.28)",
+    };
+  }
+  return {
+    color: STATUS_COLORS.missing,
+    backgroundColor: "rgba(226,109,99,0.12)",
+    borderColor: "rgba(226,109,99,0.28)",
+  };
+}
+
 function ScoreHero({
   report,
   pageCategory,
@@ -74,11 +107,7 @@ function ScoreHero({
             <span className="text-lg text-base-content/40">/ 100</span>
             <span
               className="rounded-[3px] border px-2.5 py-1 text-[13px] font-semibold"
-              style={{
-                color: STATUS_COLORS.good,
-                backgroundColor: "rgba(63,185,80,0.12)",
-                borderColor: "rgba(63,185,80,0.28)",
-              }}
+              style={gradeBadgeStyle(opt.grade, score)}
             >
               {opt.grade}
             </span>

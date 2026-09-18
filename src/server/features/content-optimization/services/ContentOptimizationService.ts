@@ -1,6 +1,8 @@
+import { waitUntil } from "cloudflare:workers";
 import { AppError } from "@/server/lib/errors";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
+import { withoutTarget } from "@/server/lib/dataforseo/onpage";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import {
   DEFAULT_LOCATION_CODE,
@@ -31,7 +33,6 @@ import { ContentOptimizationSettingsRepository } from "../repositories/ContentOp
 
 const PAGE1_LIMIT = 10;
 const RELATED_KEYWORD_LIMIT = 30;
-const LIGHHOUSE_TIMEOUT_MS = 45_000;
 const STALE_SCAN_MS = 10 * 60 * 1000;
 
 // In-memory set of scans whose background task is live in this process.
@@ -98,17 +99,14 @@ async function fetchLighthouseSeo(
 ): Promise<number | null> {
   const dataforseo = createDataforseoClient(billingCustomer);
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), LIGHHOUSE_TIMEOUT_MS);
-    try {
-      const payload = await dataforseo.lighthouse.live({
-        url,
-        strategy: "mobile",
-      });
-      return payload.scores.seo;
-    } finally {
-      clearTimeout(timer);
-    }
+    // The lighthouse client applies its own 60s timeout and deliberately
+    // rejects an external signal (aborting an already-billed call during the
+    // parse-lock body read would be unmetered), so no timeout is set here.
+    const payload = await dataforseo.lighthouse.live({
+      url,
+      strategy: "mobile",
+    });
+    return payload.scores.seo;
   } catch {
     // Lighthouse is a best-effort score component; a failure renormalizes the
     // score over the remaining components rather than failing the scan.
@@ -136,7 +134,12 @@ async function runScan(input: {
       languageCode,
       depth: PAGE1_LIMIT,
     });
-    const page1Urls = organicUrls(serpItems).slice(0, PAGE1_LIMIT);
+    // Exclude the target from the competitor set so it is parsed (and billed)
+    // only once and never benchmarked against itself.
+    const page1Urls = withoutTarget(organicUrls(serpItems), url).slice(
+      0,
+      PAGE1_LIMIT,
+    );
 
     // 2. Content parsing: the target page plus the page-1 results, batched.
     await ContentScanRepository.setProgress(jobId, 35);
@@ -183,6 +186,7 @@ async function runScan(input: {
       page1,
       relatedKeywords,
       lighthouseSeoScore,
+      languageCode,
       reportDate: new Date().toISOString().slice(0, 10),
     });
     const llm = await runLlmContentAnalysis({
@@ -254,6 +258,21 @@ export const ContentOptimizationService = {
       );
     }
 
+    // Validate the URL at this choke point so both entry points (the server
+    // function and the MCP tool) reject an invalid URL before any paid call.
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(input.url);
+    } catch {
+      throw new AppError("VALIDATION_ERROR", "A valid page URL is required.");
+    }
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "The page URL must use http or https.",
+      );
+    }
+
     const region = input.region ?? "US";
     const jobId = crypto.randomUUID();
     await ContentScanRepository.insertPending({
@@ -264,16 +283,20 @@ export const ContentOptimizationService = {
       region,
     });
 
-    // Fire-and-forget: the row is the source of truth, so the UI can poll it
-    // across navigations. We intentionally do not await the pipeline.
+    // The row is the source of truth, so the UI can poll it across navigations.
+    // Register the pipeline with waitUntil so the hosted (Cloudflare) runtime
+    // does not cancel the in-flight provider/DB work when the response is sent;
+    // in self-host Node waitUntil is a no-op and the scan runs to completion.
     activeScans.add(jobId);
-    void runScan({
-      jobId,
-      url: input.url,
-      keyword: input.keyword,
-      region,
-      billingCustomer: input.billingCustomer,
-    });
+    waitUntil(
+      runScan({
+        jobId,
+        url: input.url,
+        keyword: input.keyword,
+        region,
+        billingCustomer: input.billingCustomer,
+      }),
+    );
 
     return { jobId };
   },

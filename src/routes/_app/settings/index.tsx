@@ -173,14 +173,18 @@ function FeaturesSection() {
           <p className="text-sm">Content Optimization</p>
           <p className="mt-1 text-sm text-base-content/60">
             Page scans via your DataForSEO key. Turning this off hides the
-            module everywhere.
+            module everywhere. Only owners and admins can change it.
           </p>
         </div>
         <input
           type="checkbox"
           className="toggle toggle-primary"
           checked={moduleStatus?.enabled ?? true}
-          disabled={moduleStatus === undefined || toggleMutation.isPending}
+          disabled={
+            moduleStatus === undefined ||
+            toggleMutation.isPending ||
+            !moduleStatus.canManage
+          }
           onChange={(event) => {
             toggleMutation.mutate(event.currentTarget.checked);
           }}

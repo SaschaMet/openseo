@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import type { OnPageReport } from "@/serverFunctions/contentOptimization";
+import { getSafeExternalUrl } from "@/client/components/table/url";
 import {
   buildInternalLinksSectionText,
   buildSuggestionsSectionText,
@@ -13,8 +14,11 @@ export function SuggestionsCard({ report }: { report: OnPageReport }) {
   const questionGroups = Object.entries(questions).filter(
     ([, items]) => items.length > 0,
   );
+  const topicGaps = swipe.topic_coverage;
   const hasContent =
-    swipe.suggested_title !== null || questionGroups.length > 0;
+    swipe.suggested_title !== null ||
+    questionGroups.length > 0 ||
+    topicGaps.length > 0;
   if (!hasContent) return null;
 
   return (
@@ -37,6 +41,22 @@ export function SuggestionsCard({ report }: { report: OnPageReport }) {
                   {swipe.suggested_title}
                 </span>
               </CopyRow>
+            </div>
+          </div>
+        )}
+        {topicGaps.length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-base-content/50">
+              Topic gaps
+            </h3>
+            <div className="space-y-1 pt-1.5">
+              {topicGaps.map((topic) => (
+                <CopyRow key={topic} text={topic}>
+                  <span className="text-[15px] leading-relaxed text-base-content/80">
+                    {topic}
+                  </span>
+                </CopyRow>
+              ))}
             </div>
           </div>
         )}
@@ -84,18 +104,25 @@ export function InternalLinksCard({ report }: { report: OnPageReport }) {
         </p>
         {links.length > 0 ? (
           <div>
-            {links.map((link) => (
-              <CopyRow key={link} text={link}>
-                <a
-                  className="link truncate text-[15px]"
-                  href={link}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  {link}
-                </a>
-              </CopyRow>
-            ))}
+            {links.map((link) => {
+              const safeUrl = getSafeExternalUrl(link);
+              return (
+                <CopyRow key={link} text={link}>
+                  {safeUrl ? (
+                    <a
+                      className="link truncate text-[15px]"
+                      href={safeUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {link}
+                    </a>
+                  ) : (
+                    <span className="link truncate text-[15px]">{link}</span>
+                  )}
+                </CopyRow>
+              );
+            })}
           </div>
         ) : (
           <p className="text-[15px] text-base-content/50">

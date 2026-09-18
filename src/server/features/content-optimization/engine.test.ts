@@ -7,6 +7,8 @@ import {
   buildReport,
   computeScore,
   fleschReadingEase,
+  scoreComponents,
+  tokenize,
   type ParsedPage,
 } from "@/server/features/content-optimization/engine";
 import { applyLlmAnalysis } from "@/server/features/content-optimization/llm";
@@ -79,6 +81,19 @@ describe("computeScore", () => {
     expect(grade).toBe("F");
   });
 
+  it("returns a null score and neutral grade when no component is measurable", () => {
+    const { score, grade, focusAreas } = computeScore({
+      wordCount: null,
+      heading: null,
+      readability: null,
+      consistency: null,
+      lighthouse: null,
+    });
+    expect(score).toBeNull();
+    expect(grade).toBe("—");
+    expect(focusAreas).toEqual([]);
+  });
+
   it("renormalizes weights when lighthouse is unavailable", () => {
     // Without lighthouse (weight 0.15), the remaining weights sum to 0.85.
     // All four at 100 must still yield 100.
@@ -115,6 +130,44 @@ describe("computeScore", () => {
       lighthouse: 100,
     });
     expect(focusAreas).toEqual(["Consistency"]);
+  });
+});
+
+describe("scoreComponents", () => {
+  const avg = {
+    word_count: 800,
+    h1_count: 1,
+    h2_count: 5,
+    h3_count: 3,
+    image_count: 4,
+    entity_count: null,
+    keyword_variation_count: null,
+  };
+
+  it("computes readability for English text", () => {
+    const target = page({
+      text: "The cat sat on the mat. The dog ran fast. We ate good food today. It was a nice day for a walk by the river.",
+    });
+    const components = scoreComponents(target, avg, 90, "en");
+    expect(components.readability).not.toBeNull();
+  });
+
+  it("nulls readability for non-English text", () => {
+    const target = page({
+      text: "Der schnelle braune Fuchs springt über den faulen Hund. Er läuft schnell durch den dichten Wald im Herbst.",
+    });
+    const components = scoreComponents(target, avg, 90, "de");
+    expect(components.readability).toBeNull();
+  });
+});
+
+describe("tokenize", () => {
+  it("keeps accented Latin words as single tokens", () => {
+    expect(tokenize("café naïve résumé")).toEqual(["café", "naïve", "résumé"]);
+  });
+
+  it("keeps non-Latin script words as tokens", () => {
+    expect(tokenize("東京ガイド")).toEqual(["東京ガイド"]);
   });
 });
 
