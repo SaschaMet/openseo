@@ -56,6 +56,10 @@ import {
   getSearchConsolePerformanceTool,
   inspectUrlsTool,
 } from "@/server/mcp/tools/search-console-tools";
+import {
+  getContentScanTool,
+  runContentScanTool,
+} from "@/server/mcp/tools/content-optimization-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
 import { discoverSiteUrls, readPages, readSite } from "@/server/lib/scrape";
 import { capToolOutput } from "@/server/features/sam/samToolOutput";
@@ -422,5 +426,7 @@ export function buildSamMcpTools(
     get_audit_status: waitingAuditStatusTool(adaptTool),
     get_audit_issues: adaptTool(getAuditIssuesTool),
     get_audit_pages: adaptTool(getAuditPagesTool),
+    run_content_scan: adaptTool(runContentScanTool),
+    get_content_scan: adaptTool(getContentScanTool),
   };
 }

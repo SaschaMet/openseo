@@ -68,6 +68,10 @@ import {
   getAuditStatusTool,
   runSiteAuditTool,
 } from "@/server/mcp/tools/site-audit-tools";
+import {
+  getContentScanTool,
+  runContentScanTool,
+} from "@/server/mcp/tools/content-optimization-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
 
 type ToolSchema = z.ZodType | z.ZodRawShape;
@@ -203,6 +207,8 @@ export function createOpenSeoMcpServer(authProps: McpProps) {
   register(getAuditStatusTool);
   register(getAuditIssuesTool);
   register(getAuditPagesTool);
+  register(runContentScanTool);
+  register(getContentScanTool);
 
   return server;
 }
